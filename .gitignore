@@ -1,0 +1,11 @@
+.env
+*.env
+.DS_Store
+Thumbs.db
+.dart_tool/
+build/
+__pycache__/
+.venv/
+serviceAccountKey*.json
+google-services.json
+GoogleService-Info.plist

@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Foundit Prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>html{color-scheme:light dark}
+/* Layout concept: a design-review desk. Screen list left, one phone centre, requirement notes right.
+   Colour: cool paper greys, teal for found, amber for lost (the two report types), ink for text.
+   Type: Bricolage Grotesque for headings, Public Sans for body, JetBrains Mono for handover codes. */
+:root{
+  --bg:#e9edf1; --panel:#ffffff; --ink:#142030; --muted:#566475; --line:#d6dde5; --soft:#f2f5f8;
+  --brand:#0a6b66; --brand-ink:#ffffff; --found:#0a6b66; --found-bg:#e2f3f1;
+  --lost:#8f4a03; --lost-bg:#fdf1d9; --phone:#ffffff; --frame:#142030; --shadow:0 18px 40px rgba(20,32,48,.18);
+  --fd:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif; --fb:'Public Sans','Segoe UI',system-ui,sans-serif; --fm:'JetBrains Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1218; --panel:#151c25; --ink:#e8edf2; --muted:#9aa7b5; --line:#263241; --soft:#1b2430;
+  --brand:#3cc2b9; --brand-ink:#06201e; --found:#3cc2b9; --found-bg:#0f3330;
+  --lost:#f0b35c; --lost-bg:#3a2a0c; --phone:#151c25; --frame:#05080c; --shadow:0 18px 40px rgba(0,0,0,.5); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1218; --panel:#151c25; --ink:#e8edf2; --muted:#9aa7b5; --line:#263241; --soft:#1b2430;
+  --brand:#3cc2b9; --brand-ink:#06201e; --found:#3cc2b9; --found-bg:#0f3330;
+  --lost:#f0b35c; --lost-bg:#3a2a0c; --phone:#151c25; --frame:#05080c; --shadow:0 18px 40px rgba(0,0,0,.5); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--fb);font-size:14px;line-height:1.45;padding-inline:16px;padding-block:16px 40px}
+h1,h2,h3{font-family:var(--fd);margin:0;text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.top{max-width:1180px;margin:0 auto 18px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between}
+.top h1{font-size:26px;letter-spacing:-.01em}
+.top p{margin:2px 0 0;color:var(--muted);max-width:60ch}
+.play{background:var(--brand);color:var(--brand-ink);border:0;border-radius:10px;padding:10px 16px;font-weight:600}
+.stage{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr) 300px;gap:24px;align-items:start}
+.list{display:flex;flex-direction:column;gap:2px;position:sticky;top:12px}
+.list .grp{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 8px 4px}
+.list button{display:flex;gap:10px;align-items:baseline;text-align:left;background:none;border:0;border-radius:8px;padding:7px 8px}
+.list button b{font-family:var(--fm);font-size:12px;color:var(--muted);min-width:22px}
+.list button[aria-current="true"]{background:var(--panel);box-shadow:inset 3px 0 0 var(--brand);font-weight:600}
+.mid{display:flex;flex-direction:column;align-items:center;gap:14px;min-width:0}
+.phone{width:372px;max-width:100%;height:760px;background:var(--phone);border:10px solid var(--frame);border-radius:38px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;position:relative}
+.screen{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+.appbar{display:flex;align-items:center;gap:8px;padding:14px 16px 10px;position:sticky;top:0;background:var(--phone);z-index:2}
+.appbar h2{font-size:19px;flex:1}
+.ib{width:36px;height:36px;border-radius:50%;border:0;background:var(--soft);display:grid;place-items:center}
+.body{padding:6px 16px 20px;display:flex;flex-direction:column;gap:14px}
+.btn{border:0;border-radius:12px;padding:13px 16px;font-weight:600;background:var(--brand);color:var(--brand-ink);width:100%;text-align:center}
+.btn.sec{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--phone);color:var(--ink);border:2px solid var(--ink)}
+.btn.sm{padding:8px 12px;width:auto;border-radius:9px;font-size:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.sp{justify-content:space-between}
+.card{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--phone);text-align:left;width:100%}
+.card h3{font-size:15px}
+.muted{color:var(--muted);font-size:12.5px}
+.chip{border:1px solid var(--line);background:var(--phone);border-radius:999px;padding:6px 12px;font-size:13px}
+.chip.on{background:var(--ink);color:var(--phone);border-color:var(--ink)}
+.tag{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
+.tag.lost{background:var(--lost-bg);color:var(--lost)}.tag.found{background:var(--found-bg);color:var(--found)}
+.tag.ok{background:var(--found-bg);color:var(--found)}.tag.warn{background:var(--lost-bg);color:var(--lost)}
+.ai{font-size:11px;font-weight:600;letter-spacing:.04em;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--muted);text-transform:uppercase}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12.5px;font-weight:600}
+.field input,.field select,.field textarea{font:inherit;color:var(--ink);background:var(--phone);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%}
+.field textarea{min-height:76px;resize:vertical}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--soft);border-radius:12px;padding:3px;gap:3px}
+.seg button{border:0;background:none;border-radius:10px;padding:9px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--phone);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.banner{border-radius:12px;padding:10px 12px;font-size:13px;background:var(--lost-bg);color:var(--ink);border-left:4px solid var(--lost)}
+.banner.info{background:var(--found-bg);border-left-color:var(--found)}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--phone);padding:6px 6px 10px}
+.nav button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--muted);padding:6px 0;min-height:48px}
+.nav button[aria-current="true"]{color:var(--brand);font-weight:600}
+.bar{height:8px;background:var(--soft);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--brand);border-radius:99px}
+.mini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:11.5px;color:var(--muted)}.mini b{display:block;color:var(--ink);font-family:var(--fm);font-weight:500}
+.big2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.big2 button{border:0;border-radius:16px;padding:16px 12px;text-align:left;display:flex;flex-direction:column;gap:6px;min-height:104px}
+.big2 .l{background:var(--lost-bg);color:var(--ink)}.big2 .f{background:var(--found-bg);color:var(--ink)}
+.big2 b{font-family:var(--fd);font-size:17px;line-height:1.15}
+.photo{border:2px dashed var(--line);border-radius:14px;min-height:130px;display:grid;place-items:center;text-align:center;color:var(--muted);gap:4px;padding:16px}
+.code{font-family:var(--fm);font-size:34px;letter-spacing:.18em;text-align:center;background:var(--soft);border-radius:14px;padding:14px;border:1px dashed var(--line)}
+.steps{display:flex;gap:6px}.steps i{flex:1;height:6px;border-radius:9px;background:var(--line)}.steps i.on{background:var(--brand)}
+.sw{width:42px;height:24px;border-radius:99px;background:var(--line);border:0;position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+.sw[aria-pressed="true"]{background:var(--brand)}.sw[aria-pressed="true"]::after{left:21px}
+.sheet{position:absolute;inset:auto 0 0 0;background:var(--phone);border-top:1px solid var(--line);border-radius:20px 20px 0 0;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 -12px 30px rgba(0,0,0,.25);z-index:5}
+.notes{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;position:sticky;top:12px}
+.notes h3{font-size:18px}.notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.notes .fr{display:flex;flex-wrap:wrap;gap:4px}.notes .fr span{font-family:var(--fm);font-size:11.5px;background:var(--soft);border-radius:5px;padding:2px 6px}
+.tour{width:372px;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.tour p{margin:0}
+.foot{max-width:1180px;margin:22px auto 0;color:var(--muted);font-size:12.5px}
+.pal{max-width:1180px;margin:0 auto 20px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:16px}
+.pal h2{font-size:21px}.pal .three{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.pal .c{border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;background:var(--phone)}
+.pal .sw3{height:64px;display:flex;align-items:flex-end;padding:8px 12px;font-family:var(--fm);font-size:12px}
+.pal .c div.t{padding:12px;display:flex;flex-direction:column;gap:6px}.pal .c p{margin:0}
+.pal .qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.pal .qa div{background:var(--soft);border-radius:12px;padding:12px}.pal .qa h3{font-size:15px;margin-bottom:4px}.pal .qa p{margin:0}
+.pal small{color:var(--muted)}
+.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-weight:600}
+.top .acts{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:980px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .list{position:static;flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:6px}
+  .list .grp{display:none}.list button{white-space:nowrap;flex:none;background:var(--panel)}
+  .notes{position:static}
+}
+@media (max-width:420px){.phone{height:720px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <div>
+    <h1>Foundit</h1>
+    <p>Clickable UI prototype for the campus lost-and-found app: 12 screens and the admin section. All names, items and scores are sample data for design review.</p>
+  </div>
+  <div class="acts"><button class="ghost" id="palbtn" type="button" aria-expanded="false" aria-controls="pal">Colour rationale</button><button class="play" id="play" type="button">Play the story</button></div>
+</header>
+<section class="pal" id="pal" hidden aria-label="Colour rationale">
+<div><h2>Three colours, one job each</h2><p class="muted" style="margin:4px 0 0;max-width:75ch">Foundit uses only three colour families. Every other shade on screen is a lighter or darker tint of one of them, including the greys, which are tints of Ink. There is no red, green or purple. Meaning is also written in words (Lost, Found, Matched), so colour is never the only signal.</p></div>
+<div class="three">
+<div class="c"><div class="sw3" style="background:#0a6b66;color:#fff">Teal #0A6B66</div><div class="t"><b>Found and trusted</b><p><b>Where:</b> brand mark, main buttons, Found tags, Matched and Approved states, active tab.</p><p><b>Why:</b> teal is the "safe, go ahead" colour. It marks the good outcomes in the flow: an item found, a match made, a claim approved. It sits between blue (trust) and green (success).</p><small>White text on teal 6.4:1. Teal text on its tint 5.5:1.</small></div></div>
+<div class="c"><div class="sw3" style="background:#fdf1d9;color:#8f4a03;border-bottom:1px solid var(--line)">Amber #8F4A03 on #FDF1D9</div><div class="t"><b>Lost and needs attention</b><p><b>Where:</b> Lost tags, the "I lost something" button, warnings (ID-photo warning, day-25 renew prompt), Pending states.</p><p><b>Why:</b> lost-property tags and luggage labels are traditionally manila or amber, so users already link this colour to lost things. It reads as "pay attention" without the alarm of red.</p><small>Amber text on its tint 6.0:1. On white 6.7:1.</small></div></div>
+<div class="c"><div class="sw3" style="background:#142030;color:#fff">Ink #142030</div><div class="t"><b>Structure and text</b><p><b>Where:</b> all text, icons, borders, page and card greys (as tints), the Delete button outline, selected chips.</p><p><b>Why:</b> a deep navy-black keeps text sharp for reading in daylight on campus and gives the two colour roles room to stand out. It is the neutral the other two sit on.</p><small>Ink on white 16.4:1. Ink on both tints above 14:1.</small></div></div>
+</div>
+<div class="qa">
+<div><h3>How it represents the app</h3><p>The app has two kinds of report, Lost and Found, and one goal: bring them together. Amber is Lost, Teal is Found, and Ink is the calm structure between. A user can tell a report type from across the screen, before reading a word.</p></div>
+<div><h3>Why it is not a default AI look</h3><p>No purple-to-blue gradient, no cream and terracotta, no neon on black. The colours come from the subject: lost-property tags (amber) and a "found, safe" signal (teal). The logo is a baggage tag. Each colour has one fixed meaning instead of decoration.</p></div>
+<div><h3>Why it suits the target market</h3><p>Hypothesis to test, not a result: students aged 13 and up on one campus want a calm, trustworthy app they can use in seconds, outdoors, on mid-range phones. Two clear colours, high contrast and plain words support that. We will check it in the usability test with 5 to 8 students (NFR-06).</p></div>
+<div><h3>Rules we follow</h3><p>Only these three families. Text contrast at least 4.5:1 (NFR-07). Colour never works alone: tags carry words. Dark mode uses lighter versions of the same three.</p></div>
+</div></section>
+<main class="stage">
+  <nav class="list" id="list" aria-label="Screens"></nav>
+  <section class="mid">
+    <div class="phone" id="phone"><div class="screen" id="screen"></div><nav class="nav" id="nav" aria-label="Main"></nav></div>
+    <div class="tour" id="tour" hidden></div>
+  </section>
+  <aside class="notes" id="notes"></aside>
+</main>
+<p class="foot">Android and iOS from one Flutter codebase. This prototype is a design review tool; the real app will be built in Flutter. Match scores use the brief's starting weights and are illustrative, not validated results.</p>
+
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)};
+var S={cur:'onb',hist:[],onb:0,authMode:'in',age:'18-24',rtype:'lost',zone:'Library',claim:0,dismissed:{},tab:{notif:0,admin:0,browse:'All'},sheet:null,sw:{push:true,share:false},delConfirm:false,chips:{type:'All',cat:'Bag',zone:'Library',date:'7 days'},tour:-1,adminDone:{}};
+
+function ic(n){var p={home:'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',list:'M4 6h16M4 12h16M4 18h10',bell:'M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7zM10 20a2 2 0 0 0 4 0',user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6',back:'M15 5l-7 7 7 7',search:'M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14zM21 21l-5-5',cam:'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',more:'M12 6h.01M12 12h.01M12 18h.01',lock:'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3',shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'};return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+p[n]+'"/></svg>'}
+function logo(sz){return '<svg width="'+(sz||30)+'" height="'+(sz||30)+'" viewBox="0 0 32 32" aria-hidden="true"><path d="M6 6h14l8 10-8 10H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="var(--brand)"/><circle cx="10" cy="16" r="2.6" fill="var(--phone)"/></svg>'}
+function bar(t,back,right){return '<div class="appbar">'+(back?'<button class="ib" data-back aria-label="Back">'+ic('back')+'</button>':'')+'<h2>'+t+'</h2>'+(right||'')+'</div>'}
+function f(id,l,v,ph,type){return '<div class="field"><label for="'+id+'">'+l+'</label><input id="'+id+'" type="'+(type||'text')+'" value="'+(v||'')+'" placeholder="'+(ph||'')+'"></div>'}
+function ch(l,on,a){return '<button class="chip'+(on?' on':'')+'" '+a+'>'+l+'</button>'}
+function aiTag(){return '<span class="ai">AI</span>'}
+
+var campusZones=['Library','Cafeteria','Block A','Block B','Sports ground'];
+
+var SC={
+onb:{n:'1',t:'Splash and onboarding',m:'A',fr:['FR-01','FR-29'],look:['Three short cards, then campus and terms','Terms must be accepted before posting'],r:function(){
+  var c=[['Post what you lost or found','One report takes about a minute. Add a photo and the place on campus.'],['We match by meaning','Black backpack and dark school bag can still find each other, in English or Roman Urdu.'],['Claim it privately','Only the real owner can describe the hidden details. Handover is at the campus desk.']];
+  var i=S.onb,x=c[i];
+  var h='<div class="body" style="flex:1;justify-content:space-between;padding-top:28px"><div style="display:flex;flex-direction:column;gap:18px">'+'<div class="row sp">'+logo(34)+'<button class="chip" data-go="login">Skip</button></div>'+
+  '<div style="background:var(--soft);border-radius:22px;height:170px;display:grid;place-items:center">'+logo(84)+'</div><h2 style="font-size:26px;line-height:1.1">'+x[0]+'</h2><p class="muted" style="font-size:14px;margin:0">'+x[1]+'</p>'+
+  '<div class="steps">'+[0,1,2].map(function(k){return '<i class="'+(k<=i?'on':'')+'"></i>'}).join('')+'</div>';
+  if(i==2){h+='<div class="field"><label for="campus">Your campus</label><select id="campus"><option>COMSATS University Islamabad (pilot, sample)</option></select></div><label class="row" style="gap:10px;align-items:flex-start"><input type="checkbox" id="terms" checked style="margin-top:3px"><span class="muted">I accept the terms. They ban objectionable content, and I can report or block anyone.</span></label>'}
+  h+='</div><button class="btn" '+(i<2?'data-act="onbNext"':'data-go="login"')+'>'+(i<2?'Next':'Get started')+'</button></div>';return h}},
+login:{n:'2',t:'Login and sign-up',m:'A',fr:['FR-01','FR-02','FR-03'],look:['Age band instead of date of birth','Skipping the age band applies under-18 safety defaults','Sign in with Apple appears on iOS'],r:function(){
+  var up=S.authMode=='up';
+  return bar('Welcome to Foundit')+'<div class="body"><div class="seg"><button data-act="auth" data-v="in" aria-pressed="'+!up+'">Sign in</button><button data-act="auth" data-v="up" aria-pressed="'+up+'">Sign up</button></div>'+
+  f('em','Email','ali@student.example','you@university.edu.pk','email')+f('pw','Password','','At least 8 characters','password')+
+  (up?'<div class="field"><label>Age band</label><div class="row">'+['13-17','18-24','25+'].map(function(a){return ch(a,S.age==a,'data-act="age" data-v="'+a+'"')}).join('')+'</div><span class="muted">Skip it and the 13-17 safety defaults apply. We never ask for a date of birth.</span></div>':'')+
+  '<button class="btn" data-go="home">'+(up?'Create account':'Sign in')+'</button><div class="row" style="justify-content:center"><span class="muted">or</span></div>'+
+  '<button class="btn sec" data-go="home">Continue with Google</button><button class="btn sec" data-go="home">Sign in with Apple <span class="muted">(iOS)</span></button>'+
+  '<button class="chip" style="align-self:center" data-go="browse">Browse as guest</button><p class="muted" style="text-align:center;margin:0">Guests can browse one campus but cannot post, claim or see matches.</p></div>'}},
+home:{n:'3',t:'Home dashboard',m:'B',fr:['FR-04','FR-16'],look:['Two big actions up front','Open reports and new matches below'],r:function(){
+  return '<div class="appbar">'+logo(28)+'<div style="flex:1"><h2 style="font-size:17px">Hi Ali</h2><span class="muted">COMSATS Islamabad (sample)</span></div><button class="ib" data-go="search" aria-label="Search">'+ic('search')+'</button></div><div class="body">'+
+  '<div class="big2"><button class="l" data-act="newReport" data-v="lost"><span class="tag lost" style="align-self:flex-start">Lost</span><b>I lost something</b></button><button class="f" data-act="newReport" data-v="found"><span class="tag found" style="align-self:flex-start">Found</span><b>I found something</b></button></div>'+
+  '<div class="row sp"><h3>New matches</h3><span class="tag ok">1 new</span></div>'+
+  '<button class="card" data-go="matches"><div class="row sp"><b>Possible match for your black backpack</b></div><span class="muted">Dark school bag found at the main Library, 3 hours after your loss.</span><div class="bar"><i style="width:89%"></i></div><span class="muted">Score 0.89 (illustrative)</span></button>'+
+  '<div class="row sp"><h3>My open reports</h3><button class="chip" data-go="notifs">See all</button></div>'+
+  '<div class="card"><div class="row sp"><b>Black backpack</b><span class="tag lost">Lost</span></div><span class="muted">Library, Mon 12:30 pm</span><span class="tag ok" style="align-self:flex-start">Matched</span></div>'+
+  '<div class="card"><div class="row sp"><b>Phone charger</b><span class="tag lost">Lost</span></div><span class="muted">Cafeteria, Sun 4:10 pm</span><span class="tag warn" style="align-self:flex-start">Open</span></div></div>'}},
+create:{n:'4',t:'Create report',m:'B',fr:['FR-04','FR-07','FR-06'],look:['Lost or found switch','Zone list instead of GPS','Agent asks follow-up questions when the text is vague, labelled AI with a report button'],r:function(){
+  var L=S.rtype=='lost';
+  return bar('New report',1)+'<div class="body"><div class="seg"><button data-act="rtype" data-v="lost" aria-pressed="'+L+'">I lost it</button><button data-act="rtype" data-v="found" aria-pressed="'+!L+'">I found it</button></div>'+
+  f('ti','Title',L?'Black backpack':'Dark school bag','What is it?')+
+  '<div class="field"><label for="de">Description</label><textarea id="de">'+(L?'Lost near the library yesterday afternoon.':'Left outside the main library.')+'</textarea></div>'+
+  '<div class="field"><label for="ca">Category</label><select id="ca"><option>Bag</option><option>Phone</option><option>Wallet</option><option>Keys</option><option>Student card</option><option>Charger</option></select></div>'+
+  '<div class="field"><label>Campus zone</label><div class="row">'+campusZones.map(function(z){return ch(z,S.zone==z,'data-act="zone" data-v="'+z+'"')}).join('')+'</div></div>'+
+  '<div class="row"><div class="field" style="flex:1"><label for="dt">Date</label><input id="dt" value="Mon 12 Oct"></div><div class="field" style="flex:1"><label for="tm">Time</label><input id="tm" value="12:30 pm"></div></div>'+
+  '<div class="card" style="background:var(--found-bg);border-color:var(--found)"><div class="row sp"><b>A quick question</b><span class="row">'+aiTag()+'<button class="chip" data-act="sheet" data-v="flagai" style="padding:2px 8px;font-size:12px">Report</button></span></div><span>What colour is it, and does it have a brand or sticker?</span><input aria-label="Answer" placeholder="Black, small white sticker" style="font:inherit;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--phone);color:var(--ink)"></div>'+
+  '<button class="btn" data-go="photo">Next: photo and details</button></div>'}},
+photo:{n:'5',t:'Photo and details',m:'B',fr:['FR-05','FR-06','FR-08'],look:['ID-document warning before any upload','Private verification details only for found items','AI-processing consent before the first report'],r:function(){
+  var F=S.rtype=='found';
+  return bar('Photo and details',1)+'<div class="body"><div class="banner">Do not photograph CNICs, bank cards or other ID documents. Admins can remove photos.</div>'+
+  '<div class="photo"><div>'+ic('cam')+'</div><b>Add one photo</b><span class="muted">System picker or camera. Compressed before upload.</span></div>'+
+  (F?'<div class="card"><div class="row"><span style="color:var(--brand)">'+ic('lock')+'</span><b>Private verification details</b></div><span class="muted">Only you and campus admins can see these. The owner has to describe them to claim the item.</span>'+f('v1','Detail 1','A blue sticker inside the front pocket')+f('v2','Detail 2','Pencil case with a broken zip')+f('v3','Detail 3 (optional)','')+'</div>':'<p class="muted" style="margin:0">Photos help owners and finders recognise items. Found-item photos stay private until a claim is approved.</p>')+
+  '<label class="row" style="gap:10px;align-items:flex-start"><input type="checkbox" checked style="margin-top:3px"><span class="muted">Masked report text is processed by an AI service to find matches. CNIC, phone and card numbers are hidden first.</span></label>'+
+  '<button class="btn" data-go="matches">Submit report</button></div>'}},
+browse:{n:'6',t:'Browse reports',m:'B',fr:['FR-13','FR-15','FR-03'],look:['Found cards show only category, colour, zone and date','Guests can look but not claim'],r:function(){
+  var t=S.tab.browse;var items=[['found','Bag','Dark','Library','Mon 3:40 pm'],['lost','Black umbrella','','Block A','Mon 1:15 pm'],['found','Wallet','Brown','Cafeteria','Sun 5:00 pm'],['lost','Calculator (Casio)','','Block B','Sat 11:20 am'],['found','Keys','Silver','Sports ground','Sat 9:05 am']];
+  return '<div class="appbar"><h2>Browse</h2><button class="ib" data-go="search" aria-label="Search and filters">'+ic('search')+'</button></div><div class="body"><div class="row">'+['All','Lost','Found'].map(function(x){return ch(x,t==x,'data-act="btab" data-v="'+x+'"')}).join('')+'</div>'+
+  items.filter(function(i){return t=='All'||i[0]==t.toLowerCase()}).map(function(i){return '<button class="card" data-go="item"><div class="row sp"><b>'+i[1]+'</b><span class="tag '+i[0]+'">'+(i[0]=='lost'?'Lost':'Found')+'</span></div><div class="row muted">'+(i[2]?'<span>Colour: '+i[2]+'</span>':'')+'<span>'+i[3]+'</span><span>'+i[4]+'</span></div></button>'}).join('')+'<p class="muted" style="margin:0">Sample feed. Photos and full descriptions are hidden on found items.</p></div>'}},
+search:{n:'7',t:'Search and filters',m:'B',fr:['FR-13','FR-14'],look:['Search uses the same normalised words as matching','Filters: type, category, zone, date range'],r:function(){
+  var c=S.chips;function g(k,opts){return '<div class="row">'+opts.map(function(o){return ch(o,c[k]==o,'data-act="chip" data-k="'+k+'" data-v="'+o+'"')}).join('')+'</div>'}
+  return bar('Search',1)+'<div class="body"><div class="field"><label for="q">Keyword</label><input id="q" value="backpack"></div><div class="banner info">Also matching: bag, basta, school bag</div>'+
+  '<div class="field"><label>Type</label>'+g('type',['All','Lost','Found'])+'</div><div class="field"><label>Category</label>'+g('cat',['Bag','Phone','Wallet','Keys'])+'</div><div class="field"><label>Zone</label>'+g('zone',['Library','Cafeteria','Block A'])+'</div><div class="field"><label>Date range</label>'+g('date',['Today','7 days','14 days'])+'</div>'+
+  '<h3>2 results</h3><button class="card" data-go="item"><div class="row sp"><b>Bag</b><span class="tag found">Found</span></div><span class="muted">Dark, Library, Mon 3:40 pm</span></button><button class="card" data-go="item"><div class="row sp"><b>Backpack</b><span class="tag found">Found</span></div><span class="muted">Grey, Library, Sun 6:10 pm</span></button></div>'}},
+matches:{n:'8',t:'Match results',m:'C',fr:['FR-10','FR-11','FR-12'],look:['Up to 5 ranked matches with a score bar','Plain-language reason, labelled AI','The system suggests, a person confirms ownership'],r:function(){
+  var d=[['Dark school bag','Library, Mon 3:40 pm',89,['0.78','1.0','1.0','1.0'],'Both are black or dark bags reported near the Library, 3 hours apart.'],['Grey backpack','Library, Sun 6:10 pm',71,['0.62','1.0','1.0','0.4'],'Both are backpacks near the Library, about a day apart. Colour differs.'],['Black sports bag','Block A, Mon 5:20 pm',58,['0.55','1.0','0.6','0.9'],'Both are black bags on campus, in neighbouring zones.']];
+  return bar('Matches',1)+'<div class="body"><div class="card"><div class="row sp"><b>Black backpack</b><span class="tag lost">Lost</span></div><span class="muted">Library, Mon 12:30 pm</span></div><p class="muted" style="margin:0">Scores use starting weights and are illustrative. Suggestions only.</p>'+
+  d.map(function(x,i){if(S.dismissed[i])return '';return '<div class="card"><div class="row sp"><b>'+x[0]+'</b><b style="font-family:var(--fm)">0.'+x[2]+'</b></div><div class="bar"><i style="width:'+x[2]+'%"></i></div><div class="mini"><span>Text<b>'+x[3][0]+'</b></span><span>Category<b>'+x[3][1]+'</b></span><span>Place<b>'+x[3][2]+'</b></span><span>Time<b>'+x[3][3]+'</b></span></div><div class="row">'+aiTag()+'<span class="muted" style="flex:1">'+x[4]+'</span></div><div class="row"><button class="btn sm" data-go="item">View</button><button class="btn sm sec" data-act="dismiss" data-v="'+i+'">Dismiss</button><button class="chip" data-act="sheet" data-v="flagai" style="font-size:12px">Report</button></div></div>'}).join('')+'</div>'}},
+item:{n:'9',t:'Item details',m:'B',fr:['FR-15','FR-20','FR-27'],look:['Public fields only until a claim is approved','This is mine starts the private claim','Report and block from the menu'],r:function(){
+  return bar('Found item',1,'<button class="ib" data-act="sheet" data-v="menu" aria-label="More">'+ic('more')+'</button>')+'<div class="body"><div class="photo" style="min-height:150px"><div>'+ic('lock')+'</div><b>Photo is private</b><span class="muted">Shown to the finder, campus admins and an approved claimant.</span></div>'+
+  '<div class="row sp"><h3>Bag</h3><span class="tag found">Found</span></div><div class="card"><div class="row sp"><span class="muted">Colour</span><b>Dark</b></div><div class="row sp"><span class="muted">Zone</span><b>Library</b></div><div class="row sp"><span class="muted">Found</span><b>Mon 12 Oct, 3:40 pm</b></div><div class="row sp"><span class="muted">Held at</span><b>With finder</b></div></div>'+
+  '<p class="muted" style="margin:0">No names, phone numbers or emails are shown. Handover is at the campus desk.</p><button class="btn" data-go="claim">This is mine</button></div>'}},
+claim:{n:'10',t:'Ownership claim',m:'D',fr:['FR-19','FR-20','FR-21','FR-22','FR-23'],look:['Answer private questions the finder wrote','Status steps: submitted, approved, handed over','6-digit handover code; contact sharing only for 18+ who both opt in'],r:function(){
+  var s=S.claim;var st='<div class="steps"><i class="on"></i><i class="'+(s>=1?'on':'')+'"></i><i class="'+(s>=2?'on':'')+'"></i></div><div class="row sp muted"><span>Submitted</span><span>Approved</span><span>Handed over</span></div>';
+  var h=bar('Claim this item',1)+'<div class="body">';
+  if(s==0){h+='<div class="card"><div class="row sp"><b>Verification questions</b>'+aiTag()+'</div><span class="muted">Drafted from the finder\'s hidden details and approved by the finder.</span></div>'+f('q1','What is stuck inside the front pocket?','','Your answer')+f('q2','What is in the small case?','','Your answer')+
+  '<div class="field"><label for="nt">Note (optional)</label><textarea id="nt" placeholder="Anything else that proves it is yours"></textarea></div><div class="photo" style="min-height:70px"><span class="muted">Optional proof photo. No ID documents.</span></div><p class="muted" style="margin:0">Limits: 3 pending claims, 1 per item.</p><button class="btn" data-act="claimNext">Submit claim</button>'}
+  if(s==1){h+=st+'<div class="card"><b>Waiting for review</b><span class="muted">The finder or campus desk compares your answers with the hidden details. You will get a notification.</span></div><button class="btn sec" data-act="claimNext">Demo: approve this claim</button>'}
+  if(s==2){h+=st+'<div class="banner info"><b>Approved.</b> Show this code at the campus desk.</div><div class="code">482913</div><div class="card"><b>Handover place</b><span class="muted">Campus desk, Admin block, 9:00 am to 4:00 pm (sample)</span></div>'+
+  '<div class="card"><div class="row sp"><div><b>Share contact details</b><div class="muted">Only if both of you are 18+ and both agree.</div></div><button class="sw" data-act="sw" data-v="share" aria-pressed="'+S.sw.share+'" aria-label="Share contact"></button></div></div><button class="btn" data-go="notifs">Done</button>'}
+  return h+'</div>'}},
+notifs:{n:'11',t:'Notifications and my reports',m:'C',fr:['FR-16','FR-17','FR-18','FR-26'],look:['Match and claim alerts in one list','Day-25 renew or close prompt, archive on day 30','Mute per report'],r:function(){
+  var t=S.tab.notif;var h='<div class="appbar"><h2>Activity</h2></div><div class="body"><div class="seg"><button data-act="ntab" data-v="0" aria-pressed="'+(t==0)+'">Notifications</button><button data-act="ntab" data-v="1" aria-pressed="'+(t==1)+'">My reports</button></div>';
+  if(t==0){h+=[['Possible match','Dark school bag found at the Library. Score 0.89.','matches','2 min'],['Claim approved','Your claim for the bag was approved. Code ready.','claim','1 h'],['Reminder','Holding a found item for 3 days? Please take it to the campus desk.','home','1 d']].map(function(x){return '<button class="card" data-go="'+x[2]+'"><div class="row sp"><b>'+x[0]+'</b><span class="muted">'+x[3]+'</span></div><span class="muted">'+x[1]+'</span></button>'}).join('')}
+  else{h+='<div class="banner">Day 25: renew or close "Phone charger". It will be archived on day 30 without activity.</div>'+[['Black backpack','lost','Matched'],['Phone charger','lost','Open'],['Dark school bag','found','Claim pending']].map(function(x){return '<div class="card"><div class="row sp"><b>'+x[0]+'</b><span class="tag '+x[1]+'">'+(x[1]=='lost'?'Lost':'Found')+'</span></div><span class="tag ok" style="align-self:flex-start">'+x[2]+'</span><div class="row"><button class="btn sm sec">Renew</button><button class="btn sm sec">Close</button><button class="btn sm sec">Mute</button></div></div>'}).join('')}
+  return h+'</div>'}},
+profile:{n:'12',t:'Profile and settings',m:'A',fr:['FR-02','FR-22','FR-30'],look:['Gender is optional and never changes matches or access','Handover preference is open to everyone','Delete account inside the app'],r:function(){
+  return '<div class="appbar"><h2>Profile</h2></div><div class="body"><div class="row" style="gap:12px"><div style="width:54px;height:54px;border-radius:50%;background:var(--found-bg);color:var(--found);display:grid;place-items:center;font-family:var(--fd);font-weight:700;font-size:20px">AL</div><div><b>Ali (sample)</b><div class="muted">COMSATS Islamabad, age band '+S.age+'</div></div></div>'+
+  '<div class="field"><label for="gn">Gender (optional)</label><select id="gn"><option>Prefer not to say</option><option>Female</option><option>Male</option></select><span class="muted">Never shown to others. Used only for anonymous stats in groups of 10 or more.</span></div>'+
+  '<div class="field"><label>Handover preference</label><div class="row"><button class="chip on">At the desk</button><button class="chip">With a female staff member present</button></div><span class="muted">Second option shown where the campus offers it.</span></div>'+
+  '<div class="card"><div class="row sp"><b>Push notifications</b><button class="sw" data-act="sw" data-v="push" aria-pressed="'+S.sw.push+'" aria-label="Push notifications"></button></div></div>'+
+  '<div class="card"><button class="btn sec sm" style="text-align:left">Privacy policy</button><button class="btn sec sm" style="text-align:left">Terms of use</button><button class="btn sec sm" style="text-align:left">Contact support</button></div>'+
+  (S.delConfirm?'<div class="banner"><b>Delete account and data?</b> This cannot be undone. Data is removed within 7 days.<div class="row" style="margin-top:8px"><button class="btn danger sm" data-act="del">Yes, delete</button><button class="btn sec sm" data-act="delCancel">Cancel</button></div></div>':'<button class="btn danger" data-act="delAsk">Delete account</button>')+
+  '<button class="chip" style="align-self:center" data-go="admin">Open admin view (demo only)</button></div>'}},
+admin:{n:'A',t:'Admin section',m:'D',fr:['FR-28','FR-20','FR-25'],look:['Role-protected: campus desk staff only','Flags, claims with an AI hint, desk inventory, counts','Every action is logged'],r:function(){
+  var t=S.tab.admin;var tabs=['Flags','Claims','Desk','Stats'];var h=bar('Campus admin',1,'<span class="tag warn">Admin</span>')+'<div class="body"><div class="row">'+tabs.map(function(x,i){return ch(x,t==i,'data-act="atab" data-v="'+i+'"')}).join('')+'</div>';
+  if(t==0){h+=[['Post: "Black wallet, reply for number"','Reported for personal data'],['User: anon_4410','Reported 3 times']].map(function(x,i){var d=S.adminDone['f'+i];return '<div class="card"><b>'+x[0]+'</b><span class="muted">'+x[1]+'</span>'+(d?'<span class="tag ok" style="align-self:flex-start">'+d+' (logged)</span>':'<div class="row"><button class="btn sm" data-act="adm" data-k="f'+i+'" data-v="Hidden">Hide</button><button class="btn sm sec" data-act="adm" data-k="f'+i+'" data-v="Dismissed">Dismiss</button></div>')+'</div>'}).join('')}
+  if(t==1){var d=S.adminDone.c0;h+='<div class="card"><div class="row sp"><b>Claim: dark school bag</b>'+aiTag()+'</div><div class="row"><span class="tag ok">Strong hint</span><span class="muted">Hint only. You decide.</span></div><span class="muted">Hidden detail 1 matches the answer. Detail 2 partly matches.</span>'+(d?'<span class="tag ok" style="align-self:flex-start">'+d+' (logged)</span>':'<div class="row"><button class="btn sm" data-act="adm" data-k="c0" data-v="Approved">Approve</button><button class="btn sm sec" data-act="adm" data-k="c0" data-v="Rejected">Reject</button></div>')+'</div>'}
+  if(t==2){h+='<button class="btn sm">Log a handed-in item</button>'+[['Umbrella, black','Handed in Mon'],['Student card (masked)','Handed in Sun'],['Bottle, steel','Handed in Fri']].map(function(x){return '<div class="card"><div class="row sp"><b>'+x[0]+'</b><span class="muted">'+x[1]+'</span></div></div>'}).join('')}
+  if(t==3){h+='<p class="muted" style="margin:0">Sample numbers for layout only.</p><div class="big2">'+[['Open reports','42'],['Claims pending','3'],['Returned this week','9'],['Flags open','2']].map(function(x){return '<div class="card"><span class="muted">'+x[0]+'</span><b style="font-family:var(--fd);font-size:26px">'+x[1]+'</b></div>'}).join('')+'</div><div class="banner info">Gender stats appear only for groups of 10 or more.</div>'}
+  return h+'</div>'}}
+};
+var ORDER=['onb','login','home','create','photo','browse','search','matches','item','claim','notifs','profile','admin'];
+var NAVS=['home','browse','notifs','profile'];
+var TOUR=[['onb','Ali opens Foundit and picks his campus.'],['login','He signs up with an age band. Under-18 safety defaults apply if he skips it.'],['home','On the home screen he taps "I lost something".',function(){S.rtype='lost'}],['create','He describes the black backpack and picks the Library zone. The agent asks one follow-up.'],['photo','He adds a photo, with a warning not to include ID documents.'],['matches','Sara posted a found bag. Foundit scores it 0.89 and explains why.'],['item','Ali opens the found item. Only public fields are visible.'],['claim','He answers private questions to claim it.',function(){S.claim=0}],['claim','The desk approves, and both get a handover code.',function(){S.claim=2}],['notifs','The item is marked returned when the code is entered at the desk.']];
+
+function go(id,noPush){if(S.cur!=id){if(!noPush)S.hist.push(S.cur);S.cur=id}S.sheet=null;render()}
+function render(){var c=SC[S.cur];$('#screen').innerHTML=c.r();
+  var nv=NAVS.indexOf(S.cur)>-1;$('#nav').hidden=!nv;if(nv){$('#nav').innerHTML=[['home','Home','home'],['browse','Browse','list'],['notifs','Activity','bell'],['profile','Profile','user']].map(function(x){return '<button data-go="'+x[0]+'" aria-current="'+(S.cur==x[0])+'">'+ic(x[2])+x[1]+'</button>'}).join('')}
+  var sh='';if(S.sheet=='flagai'||S.sheet=='report'){sh='<div class="sheet"><b>Report this '+(S.sheet=='flagai'?'AI message':'post')+'</b>'+['Offensive or unsafe','Shows personal data','Wrong or misleading'].map(function(x){return '<button class="btn sec sm" data-act="sheetClose" style="width:100%;text-align:left">'+x+'</button>'}).join('')+'<button class="chip" data-act="sheetClose">Cancel</button></div>'}
+  if(S.sheet=='menu'){sh='<div class="sheet"><button class="btn sec sm" data-act="sheet" data-v="report" style="text-align:left;width:100%">Report this post</button><button class="btn sec sm" data-act="sheetClose" style="text-align:left;width:100%">Block this user</button><button class="chip" data-act="sheetClose">Cancel</button></div>'}
+  var old=$('.sheet');if(old)old.remove();if(sh)$('#phone').insertAdjacentHTML('beforeend',sh);
+  $('#list').innerHTML='<div class="grp">Screens</div>'+ORDER.map(function(k){var x=SC[k];return '<button data-go="'+k+'" aria-current="'+(S.cur==k)+'"><b>'+x.n+'</b><span>'+x.t+'</span></button>'}).join('');
+  $('#notes').innerHTML='<span class="tag found" style="align-self:flex-start">Module '+c.m+'</span><h3>'+(c.n=='A'?'Admin':'Screen '+c.n)+': '+c.t+'</h3><div class="fr">'+c.fr.map(function(x){return '<span>'+x+'</span>'}).join('')+'</div><b>What to look at</b><ul>'+c.look.map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul>';
+  var tr=$('#tour');if(S.tour>=0){tr.hidden=false;tr.innerHTML='<div class="row sp"><b>Story step '+(S.tour+1)+' of '+TOUR.length+'</b><button class="chip" data-act="tourEnd">End</button></div><p>'+TOUR[S.tour][1]+'</p><div class="row"><button class="btn sm sec" data-act="tourPrev">Back</button><button class="btn sm" data-act="tourNext">Next</button></div>'}else tr.hidden=true;
+}
+function tourTo(i){if(i<0||i>=TOUR.length)return;S.tour=i;var t=TOUR[i];if(t[2])t[2]();S.cur=t[0];S.hist=[];S.sheet=null;render()}
+
+document.addEventListener('click',function(e){
+  var el=e.target.closest('[data-go],[data-back],[data-act]');if(!el)return;
+  if(el.hasAttribute('data-back')){var p=S.hist.pop();if(p)go(p,true);return}
+  if(el.hasAttribute('data-go')){go(el.getAttribute('data-go'));return}
+  var a=el.getAttribute('data-act'),v=el.getAttribute('data-v');
+  if(a=='onbNext')S.onb++;
+  if(a=='auth')S.authMode=v;
+  if(a=='age')S.age=v;
+  if(a=='newReport'){S.rtype=v;go('create');return}
+  if(a=='rtype')S.rtype=v;
+  if(a=='zone')S.zone=v;
+  if(a=='btab')S.tab.browse=v;
+  if(a=='chip')S.chips[el.getAttribute('data-k')]=v;
+  if(a=='dismiss')S.dismissed[v]=1;
+  if(a=='claimNext')S.claim++;
+  if(a=='ntab')S.tab.notif=+v;
+  if(a=='sw')S.sw[v]=!S.sw[v];
+  if(a=='delAsk')S.delConfirm=true;
+  if(a=='delCancel')S.delConfirm=false;
+  if(a=='del'){S.delConfirm=false;S.cur='onb';S.onb=0;S.hist=[]}
+  if(a=='atab')S.tab.admin=+v;
+  if(a=='adm')S.adminDone[el.getAttribute('data-k')]=v;
+  if(a=='sheet')S.sheet=v;
+  if(a=='sheetClose')S.sheet=null;
+  if(a=='tourNext')return tourTo(S.tour+1);
+  if(a=='tourPrev')return tourTo(S.tour-1);
+  if(a=='tourEnd')S.tour=-1;
+  render();
+});
+$('#palbtn').addEventListener('click',function(){var p=$('#pal');p.hidden=!p.hidden;this.setAttribute('aria-expanded',!p.hidden)});
+$('#play').addEventListener('click',function(){S.claim=0;S.onb=0;tourTo(0)});
+render();
+})();
+</script>
+
+</body></html>
