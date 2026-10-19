@@ -8,7 +8,7 @@ Individual semester project by Basit Ul Ebad (FA23-BSE-026). Domain: mobile appl
 
 ## Status
 
-Documentation and UI design stage. App and backend code are not started yet.
+UI stage. The clickable prototype and the Flutter screens (sample data) are in place. Firebase and the backend are not started yet.
 
 ## Folders
 
@@ -16,7 +16,7 @@ Documentation and UI design stage. App and backend code are not started yet.
 | --- | --- |
 | `design/` | Clickable UI prototype (open `foundit-prototype.html` in a browser) |
 | `docs/` | Proposal, requirements, tools and technology (added as they are finalised) |
-| `app/` | Flutter app (Android and iOS), planned |
+| `app/` | Flutter app (Android and iOS), UI screens on sample data |
 | `backend/` | Python FastAPI backend, planned |
 
 ## Planned stack
