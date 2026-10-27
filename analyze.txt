@@ -1,0 +1,5 @@
+Analyzing app...                                                
+
+   info • Type could be non-nullable. Try changing the type to be non-nullable • lib/firebase_options.dart:4:24 • unnecessary_nullable_for_final_variable_declarations
+
+1 issue found. (ran in 6.6s)

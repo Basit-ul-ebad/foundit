@@ -1,0 +1,14 @@
+
+::group::✅ Passing tests
+✅ app opens on the first onboarding card
+✅ text tools Roman Urdu and English words map to the same tokens
+✅ text tools CNIC, phone and card numbers are masked
+✅ text tools word filter blocks listed words only
+✅ matching component scores follow the brief
+✅ matching the worked example is suggested
+✅ matching an unrelated item is not suggested
+✅ store flow in local mode report, match, claim, approve and hand over
+✅ store flow in local mode a found report needs a verification question
+::endgroup::
+
+🎉 9 tests passed.

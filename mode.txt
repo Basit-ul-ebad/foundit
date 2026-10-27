@@ -1,0 +1,1 @@
+wrote lib/firebase_options.dart for project foundit-55fff
