@@ -1,0 +1,81 @@
+rules_version = '2';
+
+// Foundit Firestore rules (interim version).
+// Matching runs inside the app for now, so a few writes are open to any
+// signed-in user (notifications, match records). The FastAPI backend replaces
+// that later and these rules get stricter. Limits such as 5 reports a day are
+// checked in the app only.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function isAdmin() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/users/$(me())).data.role == 'admin';
+    }
+
+    // Profiles: only the owner and admins. Nobody can make themselves admin.
+    match /users/{uid} {
+      allow read: if signedIn() && (me() == uid || isAdmin());
+      allow create: if signedIn() && me() == uid && request.resource.data.role == 'user';
+      allow update: if signedIn() && ((me() == uid &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.status == resource.data.status) || isAdmin());
+      allow delete: if signedIn() && me() == uid;
+    }
+
+    // Public report fields. Hidden answers and photos live in reportPrivate.
+    match /reports/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.userId == me();
+      allow update: if signedIn() && (resource.data.userId == me() || isAdmin());
+      allow delete: if signedIn() && (resource.data.userId == me() || isAdmin());
+    }
+
+    // Photo and hidden answers: the finder, admins and an approved claimant.
+    // Claim ids are reportId_claimantUid.
+    match /reportPrivate/{id} {
+      allow read: if signedIn() && (resource.data.ownerId == me() || isAdmin() ||
+        (exists(/databases/$(database)/documents/claims/$(id + '_' + me())) &&
+         get(/databases/$(database)/documents/claims/$(id + '_' + me())).data.status in ['approved', 'completed']));
+      allow create: if signedIn() && request.resource.data.ownerId == me();
+      allow update, delete: if signedIn() && (resource.data.ownerId == me() || isAdmin());
+    }
+
+    match /matches/{id} {
+      allow read: if signedIn() && (resource.data.lostUserId == me() ||
+        resource.data.foundUserId == me() || isAdmin());
+      allow create: if signedIn() && (request.resource.data.lostUserId == me() ||
+        request.resource.data.foundUserId == me());
+      allow update, delete: if signedIn() && (resource.data.lostUserId == me() ||
+        resource.data.foundUserId == me() || isAdmin());
+    }
+
+    match /claims/{id} {
+      allow read: if signedIn() && (resource.data.claimantId == me() ||
+        resource.data.finderId == me() || isAdmin());
+      allow create: if signedIn() && request.resource.data.claimantId == me() &&
+        request.resource.data.status == 'pending';
+      allow update: if signedIn() && (resource.data.finderId == me() ||
+        resource.data.claimantId == me() || isAdmin());
+      allow delete: if signedIn() && (resource.data.claimantId == me() || isAdmin());
+    }
+
+    // Anyone signed in can notify another user (interim). Only the owner reads.
+    match /notifications/{id} {
+      allow read, update, delete: if signedIn() && resource.data.userId == me();
+      allow create: if signedIn();
+    }
+
+    match /flags/{id} {
+      allow create: if signedIn() && request.resource.data.reporterId == me();
+      allow read, update: if isAdmin();
+    }
+
+    match /auditLogs/{id} {
+      allow create: if signedIn();
+      allow read: if isAdmin();
+    }
+  }
+}
