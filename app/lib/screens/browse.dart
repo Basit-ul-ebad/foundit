@@ -37,6 +37,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
       ),
       body: PageBody(
         children: [
+          if (store.syncError != null) NoteBanner(store.syncError!),
           if (widget.guest)
             const NoteBanner(
                 'You are browsing as a guest. Sign in to post, claim or see matches.'),

@@ -65,6 +65,10 @@ class AppStore extends ChangeNotifier {
   bool guest = false;
   bool ready = false;
 
+  /// Last problem reading from the database (for example a rules error).
+  String? syncError;
+  Future<void>? _opening;
+
   List<Report> reports = [];
   List<MatchRec> matches = [];
   List<Claim> claims = [];
@@ -94,7 +98,10 @@ class AppStore extends ChangeNotifier {
       if (u == null) {
         _closeSession();
       } else if (user?.uid != u.uid) {
-        await _openSession(u);
+        // signUp/signIn open the session themselves; wait for that instead of
+        // opening it twice at the same time.
+        await _opening;
+        if (user?.uid != u.uid) await _openSession(u);
       }
       notifyListeners();
     });
@@ -143,6 +150,7 @@ class AppStore extends ChangeNotifier {
     claims = [];
     notices = [];
     flags = [];
+    syncError = null;
   }
 
   void _cancelSubs() {
@@ -156,10 +164,17 @@ class AppStore extends ChangeNotifier {
   void _listen(String key, Stream<List<Row>> stream, void Function() apply) {
     _subs.add(stream.listen((rows) {
       _parts[key] = rows;
-      apply();
+      if (key == 'reports') syncError = null;
+      try {
+        apply();
+      } catch (e) {
+        syncError = 'Could not read $key: $e';
+      }
       notifyListeners();
     }, onError: (Object e) {
+      syncError = 'Could not load $key: $e';
       if (kDebugMode) debugPrint('watch $key failed: $e');
+      notifyListeners();
     }));
   }
 
@@ -209,13 +224,13 @@ class AppStore extends ChangeNotifier {
 
   Future<void> signUp(String email, String password, String? ageBand) async {
     final u = await auth.signUp(email, password);
-    await _openSession(u, ageBand: ageBand);
+    await (_opening = _openSession(u, ageBand: ageBand));
     notifyListeners();
   }
 
   Future<void> signIn(String email, String password) async {
     final u = await auth.signIn(email, password);
-    await _openSession(u);
+    await (_opening = _openSession(u));
     notifyListeners();
   }
 

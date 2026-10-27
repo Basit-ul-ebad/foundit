@@ -35,6 +35,7 @@ class HomeScreen extends StatelessWidget {
       ),
       body: PageBody(
         children: [
+          if (store.syncError != null) NoteBanner(store.syncError!),
           Text(kCampusName, style: TextStyle(color: cs.onSurfaceVariant)),
           const Row(
             children: [
