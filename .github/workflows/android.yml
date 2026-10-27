@@ -56,11 +56,12 @@ jobs:
         env:
           GSJ: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
+          mkdir -p "$LOGDIR"
           if [ -n "$GSJ" ]; then
             printf '%s' "$GSJ" > android/app/google-services.json
-            python3 ../tool/make_firebase_options.py android/app/google-services.json lib/firebase_options.dart
+            python3 ../tool/make_firebase_options.py android/app/google-services.json lib/firebase_options.dart | tee "$LOGDIR/mode.txt"
           else
-            echo "No GOOGLE_SERVICES_JSON secret: building in local mode."
+            echo "No GOOGLE_SERVICES_JSON secret: building in local mode." | tee "$LOGDIR/mode.txt"
           fi
 
       # Release builds need the INTERNET permission, and the app name should read Foundit.
