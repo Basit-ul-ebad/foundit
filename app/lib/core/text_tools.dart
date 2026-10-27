@@ -45,7 +45,7 @@ const _markWords = <String>{
 const _stopWords = <String>{
   'a', 'an', 'the', 'my', 'is', 'it', 'its', 'was', 'i', 'in', 'at', 'on',
   'of', 'and', 'or', 'to', 'with', 'for', 'from', 'by', 'near', 'outside',
-  'inside', 'left', 'lost', 'found', 'near', 'main', 'yesterday', 'today',
+  'inside', 'left', 'lost', 'found', 'main', 'yesterday', 'today',
   'morning', 'afternoon', 'evening', 'night', 'has', 'have', 'had', 'this',
   'that', 'some', 'small', 'big', 'please', 'help', 'around', 'there',
 };

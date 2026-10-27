@@ -75,7 +75,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           Navigator.of(sheetContext).pop();
                           final nav = Navigator.of(context);
                           await store.blockUser(report.userId);
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           toast(context, 'User blocked. Their posts are hidden.');
                           nav.pop();
                         },

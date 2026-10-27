@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/models.dart';
 import '../widgets.dart';
 import 'item_detail.dart';
 import 'search.dart';

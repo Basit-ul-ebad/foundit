@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/campus.dart';
 import '../widgets.dart';
 import 'admin.dart';
 import 'onboarding.dart';
