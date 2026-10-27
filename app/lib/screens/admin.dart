@@ -132,7 +132,7 @@ class _AdminScreenState extends State<AdminScreen> {
                   onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Log item form (demo)'))),
                   child: const Text('Log a handed-in item')),
-              for (final (name, when) in const [
+              for (final (name, handed) in const [
                 ('Umbrella, black', 'Handed in Mon'),
                 ('Student card (masked)', 'Handed in Sun'),
                 ('Bottle, steel', 'Handed in Fri'),
@@ -142,7 +142,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      Text(when, style: TextStyle(color: cs.onSurfaceVariant)),
+                      Text(handed, style: TextStyle(color: cs.onSurfaceVariant)),
                     ],
                   ),
                 ),
