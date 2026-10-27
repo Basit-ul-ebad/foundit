@@ -8,7 +8,7 @@ Built for Flutter 3.47.7 / Dart 3.13.5. Not yet compiled by the author's tooling
 
 ```
 cd app
-E:\flutter\bin\flutter create --org pk.edu.comsats --project-name foundit .
+E:\flutter\bin\flutter create --org com.onavri --project-name foundit .
 E:\flutter\bin\flutter pub get
 E:\flutter\bin\flutter analyze
 E:\flutter\bin\flutter test
