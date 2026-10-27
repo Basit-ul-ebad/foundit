@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets.dart';
 import 'activity.dart';
 import 'browse.dart';
 import 'home.dart';
@@ -18,6 +19,7 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final unread = AppScope.of(context).unreadCount;
     return Scaffold(
       body: IndexedStack(
         index: _index,
@@ -31,20 +33,23 @@ class _AppShellState extends State<AppShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
               icon: Icon(Icons.home_outlined),
               selectedIcon: Icon(Icons.home),
               label: 'Home'),
-          NavigationDestination(
+          const NavigationDestination(
               icon: Icon(Icons.list_alt_outlined),
               selectedIcon: Icon(Icons.list_alt),
               label: 'Browse'),
           NavigationDestination(
-              icon: Icon(Icons.notifications_outlined),
-              selectedIcon: Icon(Icons.notifications),
+              icon: Badge(
+                  isLabelVisible: unread > 0,
+                  label: Text('$unread'),
+                  child: const Icon(Icons.notifications_outlined)),
+              selectedIcon: const Icon(Icons.notifications),
               label: 'Activity'),
-          NavigationDestination(
+          const NavigationDestination(
               icon: Icon(Icons.person_outline),
               selectedIcon: Icon(Icons.person),
               label: 'Profile'),

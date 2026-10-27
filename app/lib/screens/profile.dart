@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
 
-import '../data.dart';
+import '../core/campus.dart';
 import '../widgets.dart';
 import 'admin.dart';
 import 'onboarding.dart';
 
 // Screen 12: profile and settings (FR-02, FR-22, FR-30)
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
+  Future<void> _leave(BuildContext context) async {
+    await Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      (route) => false,
+    );
+  }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  String _handover = 'At the desk';
-
-  Future<void> _confirmDelete() async {
+  Future<void> _confirmDelete(BuildContext context) async {
+    final store = AppScope.of(context);
     final yes = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete account and data?'),
         content: const Text(
-            'This cannot be undone. Your data is removed within 7 days.'),
+            'This cannot be undone. Your reports, claims and notifications are deleted.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -33,17 +34,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
-    if (yes == true && mounted) {
-      Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-        (route) => false,
-      );
+    if (yes != true || !context.mounted) return;
+    try {
+      await store.deleteAccount();
+      if (context.mounted) await _leave(context);
+    } catch (e) {
+      if (context.mounted) toast(context, e.toString());
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final store = AppScope.of(context);
+    final me = store.user;
+    if (me == null) return const Scaffold(body: SizedBox.shrink());
+    final initials = me.displayName.isEmpty
+        ? '?'
+        : me.displayName.substring(0, me.displayName.length > 1 ? 2 : 1).toUpperCase();
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: PageBody(
@@ -53,29 +61,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
               CircleAvatar(
                 radius: 27,
                 backgroundColor: cs.primaryContainer,
-                child: Text('AL',
+                child: Text(initials,
                     style: TextStyle(
                         color: cs.primary,
                         fontWeight: FontWeight.w800,
                         fontSize: 18)),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Ali (sample)',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
-                  Text('COMSATS Islamabad, age band ${appState.ageBand}',
-                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(me.displayName,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text('${me.email}\nCOMSATS Islamabad, age band ${me.ageBand}',
+                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+                  ],
+                ),
               ),
             ],
           ),
+          if (store.localMode)
+            const NoteBanner(
+                'Local mode: your data stays on this phone. In this mode you are also the campus admin so you can try every step.'),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DropdownButtonFormField<String>(
-                initialValue: 'Prefer not to say',
+                initialValue: me.gender,
                 decoration: const InputDecoration(labelText: 'Gender (optional)'),
                 items: const [
                   DropdownMenuItem(
@@ -83,7 +96,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   DropdownMenuItem(value: 'Female', child: Text('Female')),
                   DropdownMenuItem(value: 'Male', child: Text('Male')),
                 ],
-                onChanged: (_) {},
+                onChanged: (v) {
+                  if (v != null) store.saveProfile(me.copyWith(gender: v));
+                },
               ),
               const SizedBox(height: 6),
               Text(
@@ -106,8 +121,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     'With a female staff member present',
                   ])
                     PickChip(h,
-                        selected: _handover == h,
-                        onTap: () => setState(() => _handover = h)),
+                        selected: me.handoverPref == h,
+                        onTap: () =>
+                            store.saveProfile(me.copyWith(handoverPref: h))),
                 ],
               ),
               const SizedBox(height: 6),
@@ -115,16 +131,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5)),
             ],
           ),
-          ListenableBuilder(
-            listenable: appState,
-            builder: (context, _) => AppCard(
-              child: SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Push notifications',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
-                value: appState.pushOn,
-                onChanged: (v) => appState.update(() => appState.pushOn = v),
-              ),
+          AppCard(
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Notifications',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: const Text('In-app list. Push alerts are added later.'),
+              value: me.pushOn,
+              onChanged: (v) => store.saveProfile(me.copyWith(pushOn: v)),
+            ),
+          ),
+          AppCard(
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Share contact after approval',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text(me.isMinor
+                  ? 'Not available for ages 13-17. Handover is at the desk.'
+                  : 'Saved for later. Contact sharing is not active yet.'),
+              value: me.shareContactOptIn && !me.isMinor,
+              onChanged: me.isMinor
+                  ? null
+                  : (v) => store.saveProfile(me.copyWith(shareContactOptIn: v)),
             ),
           ),
           AppCard(
@@ -139,23 +167,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     contentPadding: EdgeInsets.zero,
                     title: Text(t),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('$t opens here (demo)'))),
+                    onTap: () =>
+                        toast(context, '$t page is linked when it is published.'),
                   ),
               ],
             ),
           ),
+          if (store.isAdmin)
+            OutlinedButton(
+              onPressed: () => go(context, const AdminScreen()),
+              child: const Text('Open campus admin'),
+            ),
+          OutlinedButton(
+            onPressed: () async {
+              await store.signOut();
+              if (context.mounted) await _leave(context);
+            },
+            child: const Text('Sign out'),
+          ),
           OutlinedButton(
             style: OutlinedButton.styleFrom(
                 side: BorderSide(color: cs.onSurface, width: 2)),
-            onPressed: _confirmDelete,
+            onPressed: () => _confirmDelete(context),
             child: const Text('Delete account'),
-          ),
-          Center(
-            child: TextButton(
-              onPressed: () => go(context, const AdminScreen()),
-              child: const Text('Open admin view (demo only)'),
-            ),
           ),
         ],
       ),

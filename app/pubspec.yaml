@@ -1,5 +1,5 @@
 name: foundit
-description: Campus-first lost-and-found app with AI matching (UI stage, sample data).
+description: Campus-first lost-and-found app with smart matching.
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -9,6 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  firebase_core: any
+  firebase_auth: any
+  cloud_firestore: any
+  shared_preferences: any
+  image_picker: any
 
 dev_dependencies:
   flutter_test:

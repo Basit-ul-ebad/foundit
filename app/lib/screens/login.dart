@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../data.dart';
+import '../core/campus.dart';
+import '../data/storage.dart';
 import '../widgets.dart';
 import 'browse.dart';
 import 'shell.dart';
@@ -16,37 +17,95 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _signUp = false;
-  String _age = '18-24';
+  bool _busy = false;
+  String? _age;
+  String? _error;
+  final _email = TextEditingController();
+  final _password = TextEditingController();
 
-  void _enter() {
-    appState.ageBand = _age;
-    Navigator.of(context)
-        .pushReplacement(MaterialPageRoute(builder: (_) => const AppShell()));
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final store = AppScope.of(context);
+    final email = _email.text.trim();
+    final password = _password.text;
+    if (!email.contains('@') || !email.contains('.')) {
+      setState(() => _error = 'Enter a valid email address.');
+      return;
+    }
+    if (password.length < 8) {
+      setState(() => _error = 'Use a password with at least 8 characters.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      if (_signUp) {
+        await store.signUp(email, password, _age);
+      } else {
+        await store.signIn(email, password);
+      }
+      if (!mounted) return;
+      await Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AppShell()), (r) => false);
+    } on AuthFailure catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Something went wrong. Check your connection and try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _guest() async {
+    final store = AppScope.of(context);
+    await store.enterGuest();
+    if (!mounted) return;
+    await go(context, const BrowseScreen(guest: true));
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final store = AppScope.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Welcome to Foundit')),
       body: PageBody(
         children: [
+          if (store.localMode)
+            const NoteBanner(
+                'Local mode: accounts and reports stay on this phone only. Firebase is not connected in this build.'),
           SegmentedButton<bool>(
             segments: const [
               ButtonSegment(value: false, label: Text('Sign in')),
               ButtonSegment(value: true, label: Text('Sign up')),
             ],
             selected: {_signUp},
-            onSelectionChanged: (s) => setState(() => _signUp = s.first),
+            onSelectionChanged: (s) => setState(() {
+              _signUp = s.first;
+              _error = null;
+            }),
           ),
-          const TextField(
+          TextField(
+            controller: _email,
             keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
+            autocorrect: false,
+            decoration: const InputDecoration(
                 labelText: 'Email', hintText: 'you@university.edu.pk'),
           ),
-          const TextField(
+          TextField(
+            controller: _password,
             obscureText: true,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
                 labelText: 'Password', hintText: 'At least 8 characters'),
           ),
           if (_signUp)
@@ -59,10 +118,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 Wrap(
                   spacing: 8,
                   children: [
-                    for (final a in const ['13-17', '18-24', '25+'])
+                    for (final a in ageBands)
                       PickChip(a,
                           selected: _age == a,
-                          onTap: () => setState(() => _age = a)),
+                          onTap: () =>
+                              setState(() => _age = _age == a ? null : a)),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -72,21 +132,33 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
             ),
+          if (_error != null)
+            Text(_error!,
+                style: TextStyle(
+                    color: cs.secondary, fontWeight: FontWeight.w600)),
           FilledButton(
-              onPressed: _enter,
-              child: Text(_signUp ? 'Create account' : 'Sign in')),
+              onPressed: _busy ? null : _submit,
+              child: _busy
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.5))
+                  : Text(_signUp ? 'Create account' : 'Sign in')),
           Center(
               child:
                   Text('or', style: TextStyle(color: cs.onSurfaceVariant))),
           OutlinedButton(
-              onPressed: _enter, child: const Text('Continue with Google')),
+              onPressed: () =>
+                  toast(context, 'Google sign-in is added in the next update.'),
+              child: const Text('Continue with Google')),
           if (defaultTargetPlatform == TargetPlatform.iOS)
             OutlinedButton(
-                onPressed: _enter,
+                onPressed: () => toast(
+                    context, 'Sign in with Apple is added with the iOS build.'),
                 child: const Text('Sign in with Apple')),
           Center(
             child: TextButton(
-              onPressed: () => go(context, const BrowseScreen(guest: true)),
+              onPressed: _busy ? null : _guest,
               child: const Text('Browse as guest'),
             ),
           ),

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../data.dart';
+import '../core/campus.dart';
+import '../core/models.dart';
+import '../core/text_tools.dart';
 import '../widgets.dart';
 import 'item_detail.dart';
 
 // Screen 7: search and filters (FR-13, FR-14)
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.guest = false});
+
+  final bool guest;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -14,10 +18,10 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   String _type = 'All';
-  String _category = 'Bag';
-  String _zone = 'Library';
-  String _date = '7 days';
-  final _keyword = TextEditingController(text: 'backpack');
+  String _category = 'Any';
+  String _zone = 'Any';
+  String _date = 'Any';
+  final _keyword = TextEditingController();
 
   @override
   void dispose() {
@@ -37,7 +41,8 @@ class _SearchScreenState extends State<SearchScreen> {
           runSpacing: 8,
           children: [
             for (final o in options)
-              PickChip(o, selected: value == o, onTap: () => setState(() => set(o))),
+              PickChip(o,
+                  selected: value == o, onTap: () => setState(() => set(o))),
           ],
         ),
       ],
@@ -46,32 +51,43 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const results = <Report>[
-      Report(ReportType.found, 'Bag', 'Library', 'Mon 3:40 pm', colour: 'Dark'),
-      Report(ReportType.found, 'Backpack', 'Library', 'Sun 6:10 pm',
-          colour: 'Grey'),
-    ];
+    final store = AppScope.of(context);
+    final results = store.search(
+      keyword: _keyword.text,
+      type: _type == 'All' ? null : (_type == 'Lost' ? ReportType.lost : ReportType.found),
+      category: _category == 'Any' ? null : _category,
+      zone: _zone == 'Any' ? null : _zone,
+      days: switch (_date) {
+        'Today' => 1,
+        '7 days' => 7,
+        '14 days' => 14,
+        _ => null,
+      },
+    );
+    final words = tokens(_keyword.text);
     return Scaffold(
       appBar: AppBar(title: const Text('Search')),
       body: PageBody(
         children: [
           TextField(
             controller: _keyword,
-            decoration: const InputDecoration(labelText: 'Keyword'),
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+                labelText: 'Keyword', hintText: 'backpack, basta, kala batua'),
           ),
-          const NoteBanner('Also matching: bag, basta, school bag',
-              lost: false),
-          _group('Type', const ['All', 'Lost', 'Found'], _type,
-              (v) => _type = v),
-          _group('Category', const ['Bag', 'Phone', 'Wallet', 'Keys'], _category,
+          if (words.isNotEmpty)
+            NoteBanner('Searching for: ${words.join(', ')}', lost: false),
+          _group('Type', const ['All', 'Lost', 'Found'], _type, (v) => _type = v),
+          _group('Category', ['Any', ...categories], _category,
               (v) => _category = v),
-          _group('Zone', const ['Library', 'Cafeteria', 'Block A'], _zone,
-              (v) => _zone = v),
-          _group('Date range', const ['Today', '7 days', '14 days'], _date,
+          _group('Zone', ['Any', ...campusZones], _zone, (v) => _zone = v),
+          _group('Date range', const ['Any', 'Today', '7 days', '14 days'], _date,
               (v) => _date = v),
-          const SectionTitle('2 results'),
+          SectionTitle('${results.length} results'),
           for (final r in results)
-            ReportCard(r, onTap: () => go(context, ItemDetailScreen(report: r))),
+            ReportCard(r,
+                onTap: () => go(
+                    context, ItemDetailScreen(report: r, guest: widget.guest))),
         ],
       ),
     );

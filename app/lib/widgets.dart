@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'data.dart';
+import 'core/format.dart' as fmt;
+import 'core/models.dart';
+import 'data/store.dart';
 
 Future<T?> go<T>(BuildContext context, Widget page) =>
     Navigator.of(context).push<T>(MaterialPageRoute(builder: (_) => page));
@@ -82,8 +84,11 @@ TagKind kindOf(ReportType type) =>
 
 String labelOf(ReportType type) => type == ReportType.lost ? 'Lost' : 'Found';
 
+// Marks text written by the app's own rules, not by a person.
 class AiBadge extends StatelessWidget {
-  const AiBadge({super.key});
+  const AiBadge({super.key, this.label = 'Auto'});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +99,7 @@ class AiBadge extends StatelessWidget {
         border: Border.all(color: cs.outline),
         borderRadius: BorderRadius.circular(5),
       ),
-      child: Text('AI',
+      child: Text(label,
           style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -262,20 +267,22 @@ class SectionTitle extends StatelessWidget {
 }
 
 class ReportCard extends StatelessWidget {
-  const ReportCard(this.report, {super.key, this.onTap});
+  const ReportCard(this.report, {super.key, this.onTap, this.status});
 
   final Report report;
   final VoidCallback? onTap;
+  final String? status;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final parts = [
-      if (report.colour != null) 'Colour: ${report.colour}',
+      if (report.colour != null && report.colour!.isNotEmpty)
+        'Colour: ${report.colour}',
       report.zone,
-      report.when,
+      fmt.when(report.eventTime),
     ];
-    final status = report.status;
+    final label = status;
     return AppCard(
       onTap: onTap,
       child: Column(
@@ -295,10 +302,12 @@ class ReportCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(parts.join('  ·  '),
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-          if (status != null) ...[
+          if (label != null) ...[
             const SizedBox(height: 8),
-            Tag(status,
-                kind: status == 'Matched' ? TagKind.found : TagKind.lost),
+            Tag(label,
+                kind: label == 'Matched' || label == 'Returned'
+                    ? TagKind.found
+                    : TagKind.lost),
           ],
         ],
       ),
@@ -306,7 +315,12 @@ class ReportCard extends StatelessWidget {
   }
 }
 
-Future<void> showReportSheet(BuildContext context, {String what = 'post'}) {
+/// Asks for a reason, then calls [onReason]. The report goes to campus admins.
+Future<void> showReportSheet(
+  BuildContext context, {
+  String what = 'post',
+  required Future<void> Function(String reason) onReason,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -330,12 +344,17 @@ Future<void> showReportSheet(BuildContext context, {String what = 'post'}) {
             ])
               ListTile(
                 title: Text(reason),
-                onTap: () {
+                onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Report sent to the campus admin (demo).')),
-                  );
+                  final messenger = ScaffoldMessenger.of(context);
+                  try {
+                    await onReason(reason);
+                    messenger.showSnackBar(const SnackBar(
+                        content: Text('Thanks. A campus admin will review it.')));
+                  } catch (_) {
+                    messenger.showSnackBar(const SnackBar(
+                        content: Text('Could not send the report. Try again.')));
+                  }
                 },
               ),
           ],
@@ -343,4 +362,24 @@ Future<void> showReportSheet(BuildContext context, {String what = 'post'}) {
       ),
     ),
   );
+}
+
+/// Shows a short message at the bottom of the screen.
+void toast(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
+}
+
+/// Gives screens access to the store.
+class AppScope extends InheritedNotifier<AppStore> {
+  const AppScope({super.key, required AppStore store, required super.child})
+      : super(notifier: store);
+
+  static AppStore of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AppScope>()!.notifier!;
+
+  /// For initState, where listening to changes is not allowed.
+  static AppStore read(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<AppScope>()!.notifier!;
 }

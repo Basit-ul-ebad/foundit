@@ -52,17 +52,28 @@ jobs:
           mkdir -p ~/.android
           cp tool/debug.keystore ~/.android/debug.keystore
 
-      - name: Optional Firebase config from secret
+      - name: Firebase settings (only when the secret is set)
         env:
           GSJ: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           if [ -n "$GSJ" ]; then
-            echo "$GSJ" > android/app/google-services.json
-            echo "google-services.json written"
+            printf '%s' "$GSJ" > android/app/google-services.json
+            python3 ../tool/make_firebase_options.py android/app/google-services.json lib/firebase_options.dart
+          else
+            echo "No GOOGLE_SERVICES_JSON secret: building in local mode."
           fi
+
+      # Release builds need the INTERNET permission, and the app name should read Foundit.
+      - name: Patch Android manifest
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.INTERNET' "$M" || \
+            sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' "$M"
+          sed -i 's#android:label="foundit"#android:label="Foundit"#' "$M"
 
       - run: mkdir -p "$LOGDIR"
       - run: flutter pub get 2>&1 | tee "$LOGDIR/pub-get.txt"
+      - run: cp pubspec.lock "$LOGDIR/pubspec.lock.txt"
       - run: flutter analyze --no-fatal-infos 2>&1 | tee "$LOGDIR/analyze.txt"
       - run: flutter test 2>&1 | tee "$LOGDIR/test.txt"
 

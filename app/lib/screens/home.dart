@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../data.dart';
+import '../core/campus.dart';
+import '../core/models.dart';
 import '../widgets.dart';
 import 'activity.dart';
 import 'create_report.dart';
@@ -14,13 +15,15 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final top = sampleMatches.first;
+    final store = AppScope.of(context);
+    final top = store.topMatches;
+    final mine = store.myReports.where((r) => r.isOpen).take(2).toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Row(children: [
-          FounditMark(),
-          SizedBox(width: 8),
-          Text('Hi Ali'),
+        title: Row(children: [
+          const FounditMark(),
+          const SizedBox(width: 8),
+          Text('Hi ${store.user?.displayName ?? ''}'),
         ]),
         actions: [
           IconButton(
@@ -32,8 +35,7 @@ class HomeScreen extends StatelessWidget {
       ),
       body: PageBody(
         children: [
-          Text('COMSATS Islamabad (sample campus)',
-              style: TextStyle(color: cs.onSurfaceVariant)),
+          Text(kCampusName, style: TextStyle(color: cs.onSurfaceVariant)),
           const Row(
             children: [
               Expanded(child: _BigAction(type: ReportType.lost)),
@@ -41,26 +43,16 @@ class HomeScreen extends StatelessWidget {
               Expanded(child: _BigAction(type: ReportType.found)),
             ],
           ),
-          const SectionTitle('New matches', trailing: Tag('1 new', kind: TagKind.found)),
-          AppCard(
-            onTap: () => go(context, const MatchesScreen()),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Possible match for your black backpack',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text(
-                    '${top.title} found at the main Library, 3 hours after your loss.',
-                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-                const SizedBox(height: 10),
-                ScoreBar(top.score),
-                const SizedBox(height: 4),
-                Text('Score ${top.score.toStringAsFixed(2)} (illustrative)',
-                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
-              ],
-            ),
-          ),
+          SectionTitle('New matches',
+              trailing: top.isEmpty
+                  ? null
+                  : Tag('${top.length} suggested', kind: TagKind.found)),
+          if (top.isEmpty)
+            Text(
+                'No matches yet. When a similar report appears on campus, it shows up here.',
+                style: TextStyle(color: cs.onSurfaceVariant))
+          else
+            _TopMatch(report: top.first.$1, match: top.first.$2),
           SectionTitle(
             'My open reports',
             trailing: TextButton(
@@ -68,7 +60,43 @@ class HomeScreen extends StatelessWidget {
               child: const Text('See all'),
             ),
           ),
-          for (final r in myReports.take(2)) ReportCard(r),
+          if (mine.isEmpty)
+            Text('You have no open reports.',
+                style: TextStyle(color: cs.onSurfaceVariant)),
+          for (final r in mine)
+            ReportCard(r,
+                status: store.statusLabel(r),
+                onTap: () => go(context, MatchesScreen(report: r))),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopMatch extends StatelessWidget {
+  const _TopMatch({required this.report, required this.match});
+
+  final Report report;
+  final MatchRec match;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AppCard(
+      onTap: () => go(context, MatchesScreen(report: report)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Possible match for your ${report.title.toLowerCase()}',
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(match.reason,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+          const SizedBox(height: 10),
+          ScoreBar(match.score),
+          const SizedBox(height: 4),
+          Text('Score ${match.score.toStringAsFixed(2)}',
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
         ],
       ),
     );

@@ -1,53 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../core/format.dart' as fmt;
+import '../core/models.dart';
 import '../widgets.dart';
+import 'claim_review.dart';
+import 'create_report.dart';
+import 'item_detail.dart';
 
-// Admin section (FR-20, FR-25, FR-28). Role-protected in the real app.
-class AdminScreen extends StatefulWidget {
+// Admin section (FR-20, FR-25, FR-28). Only users with the admin role see it.
+class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
-
-  @override
-  State<AdminScreen> createState() => _AdminScreenState();
-}
-
-class _AdminScreenState extends State<AdminScreen> {
-  final Map<String, String> _done = {};
-
-  Widget _decision(String key, List<String> actions) {
-    final done = _done[key];
-    if (done != null) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Tag('$done (logged)', kind: TagKind.found),
-      );
-    }
-    return Row(
-      children: [
-        for (var i = 0; i < actions.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          i == 0
-              ? FilledButton(
-                  style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 16)),
-                  onPressed: () => setState(() => _done[key] = actions[i]),
-                  child: Text(actions[i]),
-                )
-              : OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 16)),
-                  onPressed: () => setState(() => _done[key] = actions[i]),
-                  child: Text(actions[i]),
-                ),
-        ],
-      ],
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final store = AppScope.of(context);
+    final openFlags = store.flags.where((f) => f.status == 'open').toList();
+    final pending = store.claims.where((c) => c.pending).toList();
+    final done = store.claims.where((c) => !c.pending).toList();
     return DefaultTabController(
       length: 4,
       child: Scaffold(
@@ -72,85 +42,73 @@ class _AdminScreenState extends State<AdminScreen> {
           children: [
             // Flags
             PageBody(children: [
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Post: "Black wallet, reply for number"',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    Text('Reported for personal data',
-                        style: TextStyle(color: cs.onSurfaceVariant)),
-                    const SizedBox(height: 10),
-                    _decision('flag0', const ['Hidden', 'Dismissed']),
-                  ],
-                ),
-              ),
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('User: anon_4410',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    Text('Reported 3 times',
-                        style: TextStyle(color: cs.onSurfaceVariant)),
-                    const SizedBox(height: 10),
-                    _decision('flag1', const ['Suspended', 'Dismissed']),
-                  ],
-                ),
-              ),
-            ]),
-            // Claims
-            PageBody(children: [
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(children: [
-                      Expanded(
-                          child: Text('Claim: dark school bag',
-                              style: TextStyle(fontWeight: FontWeight.w700))),
-                      AiBadge(),
-                    ]),
-                    const SizedBox(height: 6),
-                    const Row(children: [
-                      Tag('Strong hint', kind: TagKind.found),
-                      SizedBox(width: 8),
-                      Text('Hint only. You decide.'),
-                    ]),
-                    const SizedBox(height: 6),
-                    Text('Hidden detail 1 matches the answer. Detail 2 partly matches.',
-                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-                    const SizedBox(height: 10),
-                    _decision('claim0', const ['Approved', 'Rejected']),
-                  ],
-                ),
-              ),
-            ]),
-            // Desk inventory
-            PageBody(children: [
-              FilledButton(
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Log item form (demo)'))),
-                  child: const Text('Log a handed-in item')),
-              for (final (name, handed) in const [
-                ('Umbrella, black', 'Handed in Mon'),
-                ('Student card (masked)', 'Handed in Sun'),
-                ('Bottle, steel', 'Handed in Fri'),
-              ])
+              if (openFlags.isEmpty)
+                Text('No open flags.', style: TextStyle(color: cs.onSurfaceVariant)),
+              for (final f in openFlags)
                 AppCard(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      Text(handed, style: TextStyle(color: cs.onSurfaceVariant)),
+                      Text('${f.targetType == 'report' ? 'Post' : f.targetType == 'ai' ? 'Suggestion' : 'User'}: ${f.summary}',
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      Text('Reported for: ${f.reason} (${fmt.ago(f.createdAt)})',
+                          style: TextStyle(color: cs.onSurfaceVariant)),
+                      const SizedBox(height: 10),
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        if (f.targetType == 'report')
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                                minimumSize: const Size(0, 40),
+                                padding: const EdgeInsets.symmetric(horizontal: 16)),
+                            onPressed: () => store.resolveFlag(f, outcome: 'hidden'),
+                            child: const Text('Hide post'),
+                          ),
+                        if (f.targetUserId.isNotEmpty)
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 40),
+                                padding: const EdgeInsets.symmetric(horizontal: 16)),
+                            onPressed: () =>
+                                store.resolveFlag(f, outcome: 'suspended'),
+                            child: const Text('Suspend user'),
+                          ),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                              padding: const EdgeInsets.symmetric(horizontal: 16)),
+                          onPressed: () => store.resolveFlag(f, outcome: 'dismissed'),
+                          child: const Text('Dismiss'),
+                        ),
+                      ]),
                     ],
                   ),
                 ),
             ]),
+            // Claims
+            PageBody(children: [
+              if (pending.isEmpty && done.isEmpty)
+                Text('No claims yet.', style: TextStyle(color: cs.onSurfaceVariant)),
+              for (final c in pending) ClaimReviewCard(claim: c),
+              if (done.isNotEmpty) const SectionTitle('Decided'),
+              for (final c in done) ClaimReviewCard(claim: c),
+            ]),
+            // Desk inventory
+            PageBody(children: [
+              FilledButton(
+                  onPressed: () => go(
+                      context,
+                      const CreateReportScreen(
+                          type: ReportType.found, desk: true)),
+                  child: const Text('Log a handed-in item')),
+              if (store.deskReports.isEmpty)
+                Text('No items logged at the desk yet.',
+                    style: TextStyle(color: cs.onSurfaceVariant)),
+              for (final r in store.deskReports)
+                ReportCard(r,
+                    onTap: () => go(context, ItemDetailScreen(report: r))),
+            ]),
             // Stats
             PageBody(children: [
-              Text('Sample numbers for layout only.',
-                  style: TextStyle(color: cs.onSurfaceVariant)),
               GridView.count(
                 crossAxisCount: 2,
                 childAspectRatio: 1.7,
@@ -158,14 +116,12 @@ class _AdminScreenState extends State<AdminScreen> {
                 crossAxisSpacing: 10,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                children: const [
-                  _Stat('Open reports', '42'),
-                  _Stat('Claims pending', '3'),
-                  _Stat('Returned this week', '9'),
-                  _Stat('Flags open', '2'),
+                children: [
+                  for (final e in store.stats.entries) _Stat(e.key, '${e.value}'),
                 ],
               ),
-              const NoteBanner('Gender stats appear only for groups of 10 or more.',
+              const NoteBanner(
+                  'Gender stats are not shown until a group has 10 or more people.',
                   lost: false),
             ]),
           ],

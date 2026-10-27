@@ -1,40 +1,52 @@
 import 'package:flutter/material.dart';
 
-import '../data.dart';
+import '../core/format.dart' as fmt;
+import '../core/models.dart';
 import '../widgets.dart';
 import 'item_detail.dart';
 
 // Screen 8: match results (FR-10, FR-11, FR-12)
-class MatchesScreen extends StatefulWidget {
-  const MatchesScreen({super.key});
+class MatchesScreen extends StatelessWidget {
+  const MatchesScreen({super.key, required this.report});
 
-  @override
-  State<MatchesScreen> createState() => _MatchesScreenState();
-}
+  final Report report;
 
-class _MatchesScreenState extends State<MatchesScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    const mine = Report(ReportType.lost, 'Black backpack', 'Library', 'Mon 12:30 pm');
+    final store = AppScope.of(context);
+    final list = store.matchesFor(report);
     return Scaffold(
       appBar: AppBar(title: const Text('Matches')),
       body: PageBody(
         children: [
-          const ReportCard(mine),
+          ReportCard(report, status: store.statusLabel(report)),
           Text(
-              'Scores use the starting weights and are illustrative. These are suggestions only: a person confirms ownership.',
+              'Scores use the starting weights and are suggestions only: a person confirms ownership.',
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5)),
-          for (var i = 0; i < sampleMatches.length; i++)
-            if (!appState.dismissed.contains(i)) _matchCard(context, i),
+          if (list.isEmpty)
+            const NoteBanner(
+                'No matches yet. We will add a notification when a similar report appears on campus.',
+                lost: false),
+          for (final m in list) _MatchCard(match: m, mine: report),
         ],
       ),
     );
   }
+}
 
-  Widget _matchCard(BuildContext context, int i) {
+class _MatchCard extends StatelessWidget {
+  const _MatchCard({required this.match, required this.mine});
+
+  final MatchRec match;
+  final Report mine;
+
+  @override
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final m = sampleMatches[i];
+    final store = AppScope.of(context);
+    final other = store.otherSide(match, mine);
+    if (other == null) return const SizedBox.shrink();
     Widget part(String label, double v) => Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,24 +67,25 @@ class _MatchesScreenState extends State<MatchesScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                  child: Text(m.title,
+                  child: Text(other.title,
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 15))),
-              Text(m.score.toStringAsFixed(2),
+              Text(match.score.toStringAsFixed(2),
                   style: const TextStyle(
                       fontFamily: 'monospace', fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 2),
-          Text(m.where, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+          Text('${other.zone}, ${fmt.when(other.eventTime)}',
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
           const SizedBox(height: 8),
-          ScoreBar(m.score),
+          ScoreBar(match.score),
           const SizedBox(height: 8),
           Row(children: [
-            part('Text', m.text),
-            part('Category', m.category),
-            part('Place', m.place),
-            part('Time', m.time),
+            part('Text', match.text),
+            part('Category', match.category),
+            part('Place', match.place),
+            part('Time', match.time),
           ]),
           const SizedBox(height: 8),
           Row(
@@ -81,7 +94,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
               const AiBadge(),
               const SizedBox(width: 8),
               Expanded(
-                  child: Text(m.reason,
+                  child: Text(match.reason,
                       style:
                           TextStyle(color: cs.onSurfaceVariant, fontSize: 13))),
             ],
@@ -93,12 +106,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                 style: FilledButton.styleFrom(
                     minimumSize: const Size(0, 40),
                     padding: const EdgeInsets.symmetric(horizontal: 16)),
-                onPressed: () => go(
-                  context,
-                  ItemDetailScreen(
-                    report: Report(ReportType.found, m.title, m.where, ''),
-                  ),
-                ),
+                onPressed: () => go(context, ItemDetailScreen(report: other)),
                 child: const Text('View'),
               ),
               const SizedBox(width: 8),
@@ -106,12 +114,17 @@ class _MatchesScreenState extends State<MatchesScreen> {
                 style: OutlinedButton.styleFrom(
                     minimumSize: const Size(0, 40),
                     padding: const EdgeInsets.symmetric(horizontal: 16)),
-                onPressed: () => setState(() => appState.dismissed.add(i)),
+                onPressed: () => store.dismissMatch(match),
                 child: const Text('Dismiss'),
               ),
               const Spacer(),
               TextButton(
-                onPressed: () => showReportSheet(context, what: 'AI message'),
+                onPressed: () => showReportSheet(
+                  context,
+                  what: 'suggestion',
+                  onReason: (reason) => store.flagOther(
+                      'ai', 'Match suggestion: ${other.title}', reason),
+                ),
                 child: const Text('Report'),
               ),
             ],

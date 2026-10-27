@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../data.dart';
+import '../core/models.dart';
 import '../widgets.dart';
 import 'item_detail.dart';
 import 'search.dart';
@@ -21,7 +21,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final items = sampleFeed.where((r) =>
+    final store = AppScope.of(context);
+    final items = store.feed.where((r) =>
         _tab == 'All' || labelOf(r.type) == _tab);
     return Scaffold(
       appBar: AppBar(
@@ -30,7 +31,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
           IconButton(
             tooltip: 'Search and filters',
             icon: const Icon(Icons.search),
-            onPressed: () => go(context, const SearchScreen()),
+            onPressed: () =>
+                go(context, SearchScreen(guest: widget.guest)),
           ),
         ],
       ),
@@ -50,11 +52,15 @@ class _BrowseScreenState extends State<BrowseScreen> {
           for (final r in items)
             ReportCard(
               r,
+              status: r.userId == store.uid ? 'Yours' : null,
               onTap: () =>
                   go(context, ItemDetailScreen(report: r, guest: widget.guest)),
             ),
+          if (items.isEmpty)
+            Text('No open reports yet.',
+                style: TextStyle(color: cs.onSurfaceVariant)),
           Text(
-              'Sample feed. Photos and full descriptions are hidden on found items.',
+              'Descriptions, photos and hidden details of found items are shown only to the finder, campus admins and an approved claimant.',
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5)),
         ],
       ),
